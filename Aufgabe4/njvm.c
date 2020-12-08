@@ -1,5 +1,5 @@
 // gcc -g -Wall -std=c99 -pedantic -o njvm njvm.c
-// VM Version 2
+// VM Version 4
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -36,11 +36,17 @@
 #define jmp 23
 #define brf 24
 #define brt 25
+#define CALL 26
+#define RET 27
+#define DROP 28
+#define PUSHR 29
+#define POPR 30
+#define DUP 31
 
 #define IMMEDIATE(x)((x) & 0x00FFFFFF)
 #define SIGN_EXTEND(i)((i) & 0x00800000 ? (i) | 0xFF000000 : (i))
 #define OPCODE(x)((x) >> 24)
-#define VERSION 3
+#define VERSION 4
 
 // <--------------------Functions(Deklaration)----------------------->
 int pop();
@@ -58,13 +64,15 @@ void debugmode(void);
 
 // ------------------------Variables--------------------->
 const char *instructions[] = {"halt", "pushc", "add", "sub", "mul", "div", "mod", "rdint", "wrint", "rdchr",
- "wrchr", "pushg", "popg", "asf", "rsf", "pushl", "popl", "eq", "ne", "lt", "le", "gt", "ge", "jmp", "brf", "brt"};
+ "wrchr", "pushg", "popg", "asf", "rsf", "pushl", "popl", "eq", "ne", "lt", "le", "gt", "ge", "jmp", "brf", 
+ "brt", "call", "ret", "drop", "pushr", "popr", "dup"};
 int sp=0; // the stackpointer
 int counter = 0;  // the counter for saving the instructions
 int pc = 0; // the program counter
 int fp = 0;   // frame pointer
 int *SDA;
 int *stack;
+int RVR;
 unsigned int *program_memory;
 unsigned int info [4];
 int breakpoint = -1;
@@ -114,9 +122,9 @@ int execute(int i){
         case 5: calculate('/');break; //div
         case 6: calculate('%');break; //mod
         case 7: printf("please enter a number..\n"); scanf("%d", &tempint); push(tempint);break;// rdint
-        case 8: printf("%d\n", pop());break;// wrint
+        case 8: printf("%d", pop());break;// wrint
         case 9: printf("please enter a charakter..\n"); scanf(" %c", &tempchar); push(tempchar); break;// rdchr
-        case 10: printf("%c\n", pop());;break;// wrchr
+        case 10: printf("%c", pop());;break;// wrchr
         case 11: push(SDA[immediate]);break;    // pushg
         case 12: SDA[immediate] = pop();break;  // popg
         case 13: push(fp); fp = sp; sp += immediate;break;     // asf
@@ -135,6 +143,14 @@ int execute(int i){
         case 23: pc = immediate; break; // jmp
         case 24: if(pop() == FALSE) pc = immediate; break; // brf
         case 25: if(pop() == TRUE) pc = immediate; break; // brt
+        /******************FUNCTION CALL*************************/
+        // Berechnung eines Offsets:   stack[-2-(Anzahl der Argumente)+(i-tes Argument)]
+        case 26: push(pc/*+1*/); pc = immediate; break;       // call
+        case 27: pc = pop();  break;                    // ret
+        case 28: for (int i = 0; i < immediate; i++) pop();  break; // drop n, es werden n Elemente gelöscht..!!
+        case 29: push(RVR);      break;           // pushr
+        case 30: RVR = pop();    break;           // popr
+        case 31: push(stack[sp-1]); /*int dup = pop(); push(dup); push(dup);*/    //dup
             
         default: break;        
     }
@@ -142,6 +158,7 @@ int execute(int i){
     if (cutInstructions(program_memory[pc])[0] == 0)        // halt
     {
         //return 0;
+        printf("Ninja Virtual Mashine stopped\n");
         exit(0);
     }
     return 1;
@@ -290,19 +307,28 @@ void debugmode()
         scanf("%s", input);                 // read the specified action
         if (strcmp(input, "inspect") == 0)
         {
-            printf("DEBUG [inspect]: stack, data..?\n");
-            scanf("%s", input);
-            if (strcmp(input, "data") == 0)
+            while (1)
             {
-                printf("        --- end of data ---        \n");
-                print_step();
-            }
-            else if (strcmp(input, "stack") == 0)
-            {
-                print_stack();
-                printf("        --- bottom of stack ---        \n");
-                printf("--------------------------------------------------------\n");
-                print_step();
+                printf("DEBUG [inspect]: stack, data, <ret> for return..?\n");
+                scanf("%s", input);
+                if (strcmp(input, "data") == 0)
+                {
+                    printf("        --- end of data ---        \n");
+                    print_step();
+                    break;
+                }
+                else if (strcmp(input, "stack") == 0)
+                {
+                    print_stack();
+                    printf("        --- bottom of stack ---        \n");
+                    printf("--------------------------------------------------------\n");
+                    print_step();
+                    break;
+                }
+                else if (strcmp(input, "ret") == 0)
+                    break;
+                else
+                    printf("unknown column: please try it again...\n");
             }
         }
         else if (strcmp(input, "list") == 0)
@@ -323,19 +349,19 @@ void debugmode()
         {
             if (breakpoint > -1)
                     printf("DEBUG [breakpoint]: set at %d\n", breakpoint);
-                printf("DEBUG [breakpoint]:  address to set, -1 to clear, <ret> for no change..?  \n");
-                scanf("%s", input);
-            if (strcmp(input, "ret") != 0 && atoi(input) > 0)
-            {
-                int address = atoi(input);   
-                if(address == -1)
-                    breakpoint = -1;
-                else if(address > -1)
-                    breakpoint = address;
-                printf("DEBUG [breakpoint]: now set at %d", breakpoint);
-                printf("--------------------------------------------------------\n");
-                print_step();
-            }
+            printf("DEBUG [breakpoint]:  address to set, -1 to clear, <ret> for no change..?  \n");
+            scanf("%s", input);
+            if (strcmp(input, "ret") == 0)
+                continue;
+
+            int address = atoi(input);   
+            if(address == -1)
+                breakpoint = -1;
+            else if(address > -1)
+                breakpoint = address;
+            printf("DEBUG [breakpoint]: now set at %d\n", breakpoint);
+            printf("--------------------------------------------------------\n");
+            print_step();
         }
         else if (strcmp(input, "step") == 0)
         {
@@ -344,21 +370,19 @@ void debugmode()
             print_step();
         }
         else if (strcmp(input, "run") == 0)
-        {
             start();
-        }
         else if (strcmp(input, "quit") == 0)
-        {
             exit(0);
-        }
+        else
+            printf("unknown column: please try it again...\n");
     }
 }
 
 int main (int argc, char *argv[]) {
     
-    if (argc < 2)
-        exit(1);
-    
+    /*if (argc < 2)
+        exit(1);*/
+    printf("Ninja Virtual Mashine started\n");
     if(strcmp(argv[1], "--help") == 0)
     {
         printf("usage: ./njvm [option] [option] ...\n"
@@ -379,7 +403,11 @@ int main (int argc, char *argv[]) {
         printf("DEBUG: file '%s' loaded (code size = %d, data size = %d)\n", argv[2], info[2], info[3]);
         debugmode();
     }
-    else if (strcmp(argv[1], "") != 0)
+    else
+    {
         openFile(argv[1]);
+        start();
+    }
+    printf("Ninja Virtual Mashine stopped\n");
     return 0;
 }

@@ -83,6 +83,7 @@ void calculate(char o){
 
 int execute(int i){
     int *instruc = cutInstructions(program_memory[pc]);
+    pc++;
     int opcode = instruc[0];
     int immediate = instruc[1];
     int tempint;
@@ -125,7 +126,6 @@ void start(){
             free(program_memory);           // program memory wird freigegeben
             break;
         }
-        pc++;
     }
 }
 

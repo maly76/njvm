@@ -1,12 +1,12 @@
 //
-// prog1.asm -- an assembler example with global variables
+// prog2.asm -- an assembler example with local variables
 //
 
 //
 // compute the gcd of two positive numbers
 //
-// global Integer x;
-// global Integer y;
+// local Integer x;
+// local Integer y;
 // x = readInteger();
 // y = readInteger();
 // while (x != y) {
@@ -19,43 +19,45 @@
 // writeInteger(x);
 // writeCharacter('\n');
 
+	asf	2
 	// x = readInteger();
 	rdint
-	popg	0
+	popl	0
 	// y = readInteger();
 	rdint
-	popg	1
+	popl	1
 	// while ...
 L1:
 	// x != y
-	pushg	0
-	pushg	1
+	pushl	0
+	pushl	1
 	ne
 	brf	L2
 	// if ...
-	pushg	0
-	pushg	1
+	pushl	0
+	pushl	1
 	gt
 	brf	L3
 	// x = x - y
-	pushg	0
-	pushg	1
+	pushl	0
+	pushl	1
 	sub
-	popg	0
+	popl	0
 	jmp	L4
 L3:
 	// y = y - x
-	pushg	1
-	pushg	0
+	pushl	1
+	pushl	0
 	sub
-	popg	1
+	popl	1
 L4:
 	jmp	L1
 L2:
 	// writeInteger(x);
-	pushg	0
+	pushl	0
 	wrint
 	// writeCharacter('\n');
 	pushc	'\n'
 	wrchr
+	rsf
 	halt
