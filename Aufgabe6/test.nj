@@ -1,0 +1,14 @@
+void main()
+{
+    local Integer i;
+    local Integer x;
+
+    i = readInteger();
+    x = 5;
+
+    if(i < x)
+        writeInteger(0);
+    else
+        writeInteger(1);
+    
+}
