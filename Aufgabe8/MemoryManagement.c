@@ -45,8 +45,7 @@ void * reserveMemoryForAnObject(size_t Objsize){
         startGC();
         if ((freePointer + Objsize) > endOfHalfMemory)
         {
-            perror("Error: heap overflow\n");
-            exit(0);
+            fatalError("heap overflow");
         }
     }
     

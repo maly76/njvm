@@ -109,7 +109,7 @@ size_t currentSizeOfStack = 0;
 bool checkIndex(int index, ObjRef cmpObject)
 {
     if (IS_PRIMITIVE(cmpObject) == TRUE)
-        return false;
+        fatalError("trying to index a not array");
     
     if (index < 0 || index > GET_ELEMENT_COUNT(cmpObject))
         fatalError("Array index out of bounds");
@@ -386,20 +386,17 @@ void openFile(char filename[])
 {
     FILE * filep = NULL;
     if ((filep = fopen(filename, "r")) == NULL){
-        perror("ERROR - cannot open file code\n");
-        exit(1);
+        fatalError("cannot open file code");
     }
 
     fread(info, sizeof(unsigned int), 4, filep); //   global variable.size * 4
 
      if(info[0] != 0x46424a4e){//info0 - identifies
-         perror("Falscher Identifier");
-         exit(100);
+        fatalError("Falscher Identifier");
      }
 
     if(info[1] != VERSION){ //info1= Version
-        perror("VERSION ist falsch!");
-        exit(100);
+        fatalError("VERSION ist falsch!");
     }
 
     program_memory = reserveMemoryForPM(info[2]);
@@ -409,13 +406,11 @@ void openFile(char filename[])
     reserveMemoryinHeap(sizeOfHeap);
 
     if(program_memory == NULL){
-        perror("Speicherplatz falsch vergeben");
-        exit(100);
+        fatalError("Speicherplatz falsch vergeben");
     }
 
     if(SDA == NULL){
-        perror("Globaler Speicherplatz falsch vergeben");
-        exit(100);
+        fatalError("Globaler Speicherplatz falsch vergeben");
     }
 
     int read_len = 0;
@@ -426,7 +421,7 @@ void openFile(char filename[])
     }
     int fclose(FILE * filep);
     if (fclose(filep) != 0){
-        perror("ERROR (fclose)");
+        fatalError("ERROR (fclose)");
     }
 }
 
